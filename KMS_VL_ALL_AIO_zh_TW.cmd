@@ -1,53 +1,53 @@
 <!-- : Begin batch script
 @setlocal DisableDelayedExpansion
-@set uivr=v46
+@set uivr=v47
 @echo off
 :: ### 配置選項 ###
 
-:: 更改參數為 1 以啟用調試模式（可與無人參與選項一起使用）
+:: 更改參數為 1 以啟用除錯模式（可與無人參與選項一起使用）
 set _Debug=0
 
-:: 更改參數為 0 以通過腳本關閉 Windows 或 Office 激活處理
+:: 更改參數為 0 以通過腳本關閉 Windows 或 Office 啟動處理
 set ActWindows=1
 set ActOffice=1
 
-:: 更改參數為 0 關閉 Office C2R 零售版本轉為批量版
+:: 更改參數為 0 關閉 Office C2R 零售版轉為批次版
 set AutoR2V=1
 
-:: 更改參數為 0 已將 Windows 10/11 KMS38 還原為普通 KMS
+:: 更改參數為 0 以將 Windows 10/11 KMS38 還原為普通 KMS
 set SkipKMS38=1
 
 :: ### 無人值守選項 ###
 
-:: 更改參數為 1 並設置 KMS_IP 地址以通過無人值守的外部 KMS 服務器激活
+:: 更改參數為 1 並設置 KMS_IP 地址以通過無人值守的外部 KMS 伺服器啟動
 set External=0
 set KMS_IP=0.0.0.0
 
-:: 更改參數為 1 以無人值守方式運行手動激活模式
+:: 更改參數為 1 以無人值守方式運行手動啟動模式
 set uManual=0
 
-:: 更改參數為 1 以無人值守模式運行自動更新激活模式
+:: 更改參數為 1 以無人值守運行自動更新啟動模式
 set uAutoRenewal=0
 
 :: 更改參數為 1 以限制任何輸出
 set Silent=0
 
-:: 更改參數為 1 可將輸出重定向到本文件，僅適用於 Silent=1
+:: 更改參數為 1 可將輸出重定向到文本文件，僅適用於 Silent=1
 set Logger=0
 
 :: ### 高級 KMS 選項 ###
 
-:: 更改 KMS 自動續訂計畫，以分鐘為單位：從 15 分鐘到 43200 分鐘
-:: 例如： 10080 = 每周， 1440 = 每天， 43200 = 每月
+:: 更改 KMS 自動續訂計劃，以分鐘為單位的範圍: 從 15 分鐘到 43200 分鐘
+:: 例如: 10080 = 每週, 1440 = 每天, 43200 = 每月
 set KMS_RenewalInterval=10080
 
-:: 更改 KMS 重新嘗試失敗激活或未激活的計畫，以分鐘為單位的範圍：從 15 分鐘到 43200 分鐘
+:: 更改 KMS 重新嘗試失敗啟動或未啟動的計劃，以分鐘為單位的範圍: 從 15 分鐘到 43200 分鐘
 set KMS_ActivationInterval=120
 
-:: 更改 KMS 模擬服務器的硬見哈希值（僅用於 Windows 8.1和10）
+:: 更改 KMS 模擬伺服器的硬體哈希值（僅用於 Windows 8.1和10）
 set KMS_HWID=0x3A1C049600B60076
 
-:: 更改 KMS TCP 端口
+:: 更改 KMS TCP 埠
 set KMS_Port=1688
 
 :: 更改為 1 採用 VBS 而不是 wmic.exe 來訪問 WMI
@@ -67,7 +67,7 @@ set WMI_VBS=0
 
 set KMS_Emulation=1
 set Unattend=0
-set _uIP=0.0.0.0
+set _uIP=172.16.0.2
 
 set "_Null=1>nul 2>nul"
 
@@ -141,6 +141,8 @@ if /i "%PROCESSOR_ARCHITECTURE%"=="x86" if "%PROCESSOR_ARCHITEW6432%"=="" set "x
 if /i "%PROCESSOR_ARCHITEW6432%"=="amd64" set "xBit=x64"&set "xOS=x64"&set "_orig=%o_x64%"
 if /i "%PROCESSOR_ARCHITEW6432%"=="arm64" set "xBit=x86"&set "xOS=A64"&set "_orig=%o_arm%"
 
+reg query HKLM\SYSTEM\CurrentControlSet\Services\WinMgmt /v Start 2>nul | find /i "0x4" 1>nul && (goto :E_WMS)
+
 set _cwmi=0
 for %%# in (wmic.exe) do @if not "%%~$PATH:#"=="" (
 wmic path Win32_ComputerSystem get CreationClassName /value 2>nul | find /i "ComputerSystem" 1>nul && set _cwmi=1
@@ -149,6 +151,10 @@ set _pwsh=1
 for %%# in (powershell.exe) do @if "%%~$PATH:#"=="" set _pwsh=0
 if not exist "%SystemRoot%\System32\WindowsPowerShell\v1.0\powershell.exe" set _pwsh=0
 if %_pwsh% equ 0 goto :E_PS
+
+set psfull=1
+2>nul %_psc% $ExecutionContext.SessionState.LanguageMode | find /i "Full" 1>nul || set psfull=0
+if %psfull% equ 0 goto :E_LM
 
 set _dllPath=%SystemRoot%\System32
 if %xOS%==A64 %_psc% $env:PROCESSOR_ARCHITECTURE 2>nul | find /i "x86" 1>nul && set _dllPath=%SystemRoot%\Sysnative
@@ -278,10 +284,10 @@ if %_Debug% EQU 0 (
   set "_Pause="
   if %Silent% EQU 0 (
   echo.
-  echo 在調適模式下運行...
+  echo 在除錯模式下運行...
   if not defined _args (echo 完成後窗口將關閉) else (echo 請稍候...)
   echo.
-  echo 正在寫入調適日誌：
+  echo 正在寫入除錯日誌:
   echo "!_log!_Debug!_suf!.log"
   )
   @echo on
@@ -399,66 +405,68 @@ echo           %line3%
 echo.
 if %_AUR% EQU 1 (           
 rem echo                [1] 激  活 [%_dMode% 模式]
-call :Cfgbg %_cWht% "               [1] 激活" %_cGrn% "[%_dMode%模式]"
+call :Cfgbg %_cWht% "               [1] 啟動" %_cGrn% "[%_dMode%模式]"
 ) else (
-call :Cfgbg %_cWht% "               [1] 激活" %_cBlu% "[%_dMode%模式]"
+call :Cfgbg %_cWht% "               [1] 啟動" %_cBlu% "[%_dMode%模式]"
 )
 echo.
 if %_AUR% EQU 1 (           
-call :Cfgbg %_cWht% "               [2] 添加自動續期計畫任務 " %_cGrn% "[%_dHook%]"
+call :Cfgbg %_cWht% "               [2] 添加自動續期計劃任務 " %_cGrn% "[%_dHook%]"
 ) else (
-echo                [2] 添加自動續期計畫任務
+echo                [2] 添加自動續期計劃任務
 )
-echo                [3] 清理移除續期計畫任務
+echo                [3] 清理移除續期計劃任務
 echo                %line4%
 echo.
-echo                    配置選項：
+echo                    配置選項:
 echo.
 if %_dDbg%==No (           
-echo                [4] 調試模式                    [%_dDbg%]
+echo                [4] 除錯模式                    [%_dDbg%]
 ) else (
-call :Cfgbg %_cWht% "               [4] 調試模式                    " %_cRed% "[%_dDbg%]"
+call :Cfgbg %_cWht% "               [4] 除錯模式                    " %_cRed% "[%_dDbg%]"
 )
 if %_dAwin%==Yes (
-echo                [5] 激活 Windows                [%_dAwin%]
+echo                [5] 啟動 Windows                [%_dAwin%]
 ) else (
-call :Cfgbg %_cWht% "               [5] 激活 Windows                " %_cYel% "[%_dAwin%]"
+call :Cfgbg %_cWht% "               [5] 啟動 Windows                " %_cYel% "[%_dAwin%]"
 )
 if %_dAoff%==Yes (
-echo                [6] 激活 Office                 [%_dAoff%]
+echo                [6] 啟動 Office                 [%_dAoff%]
 ) else (
-call :Cfgbg %_cWht% "               [6] 激活 Office                 " %_cYel% "[%_dAoff%]" 
+call :Cfgbg %_cWht% "               [6] 啟動 Office                 " %_cYel% "[%_dAoff%]" 
 )
 if %_dArtv%==Yes (
-echo                [7] Office零售版轉換成批量許可版  [%_dArtv%]
+echo                [7] Office零售版轉換批次許可版  [%_dArtv%]
 ) else (
-call :Cfgbg %_cWht% "               [7] Office零售版轉換成批量許可版  " %_cYel% "[%_dArtv%]"
+call :Cfgbg %_cWht% "               [7] Office零售版轉換批次許可版  " %_cYel% "[%_dArtv%]"
 )
 if %winbuild% GEQ 10240 (
 if %_dWXKMS%==Yes (
-echo                [X] 跳過 KMS38 激活 Windows 10  [%_dWXKMS%]
+echo                [X] 跳過 KMS38 啟動 Windows 10  [%_dWXKMS%]
 ) else (
-call :Cfgbg %_cWht% "               [X] 跳過 KMS38 激活 Windows 10  " %_cYel% "[%_dWXKMS%]"
+call :Cfgbg %_cWht% "               [X] 跳過 KMS38 啟動 Windows 10  " %_cYel% "[%_dWXKMS%]"
 ))
 echo                %line4%
 echo.
-echo                    其他選項：
+echo                    其它選項:
 echo.
-echo                [8] 檢查激活狀態 [vbs]
-echo                [9] 檢查激活狀帶 [wmi]
+echo                [8] 檢查啟動狀態 [vbs]
+echo                [9] 檢查啟動狀態 [wmi]
 echo                [S] 創建 $OEM$ 文件夾
-echo                [R] 閱讀腳本自述文件檔
-echo                [E] 自定義KMS服務器
+echo                [D] 嵌入二進位制解碼文件
+echo                [R] 閱讀該腳本自述文件
+echo                [E] 啟動[外部調用地址]
 echo           %line3%
 echo.
 if %_NCS% EQU 0 (
 popd
 )
-choice /c 1234567890ERSX /n /m ">           菜單選項（按0退出）
+choice /c 1234567890EDRSX /n /m ">           菜單選項（敲0退出）"
 set _el=%errorlevel%
-if %_el%==14 if %winbuild% GEQ 10240 (if %SkipKMS38% EQU 0 (set SkipKMS38=1) else (set SkipKMS38=0))&goto :MainMenu
-if %_el%==13 (call :CreateOEM)&goto :MainMenu
-if %_el%==12 (call :CreateReadMe)&goto :MainMenu
+if %_el%==15 if %winbuild% GEQ 10240 (if %SkipKMS38% EQU 0 (set SkipKMS38=1) else (set SkipKMS38=0))&goto :MainMenu
+if %_el%==14 (call :CreateOEM)&goto :MainMenu
+if %_el%==13 (call :CreateReadMe)&goto :MainMenu
+if %_el%==12 (call :CreateBIN)&goto :MainMenu
 if %_el%==11 goto :E_IP
 if %_el%==10 (set _quit=1&goto :TheEnd)
 if %_el%==9 (call :casWm)&goto :MainMenu
@@ -530,7 +538,8 @@ exit /b
 cls
 set kip=
 echo.
-echo 輸入/黏貼自定義KMS服務器地址，然後按回車鍵確定：
+echo 輸入/黏貼自訂KMS伺服器地址，然後敲確認鍵確定：
+echo.
 set /p kip=
 if not defined kip goto :MainMenu
 set "kip=%kip: =%"
@@ -585,7 +594,7 @@ if %winbuild% GEQ 9600 (
   if %winbuild% EQU 14393 reg add "HKLM\SOFTWARE\Policies\Microsoft\Windows NT\CurrentVersion\Software Protection Platform" /v NoAcquireGT /t REG_DWORD /d 1 /f %_Nul3%
 )
 echo.
-echo 激活模式： %mode%
+echo 啟動模式: %mode%
 call :StopService sppsvc
 if %OsppHook% NEQ 0 call :StopService osppsvc
 if %External% EQU 0 if %_ReAR% EQU 0 (set _verb=0&set _rtr=ReturnHook&goto :InstallHook)
@@ -628,7 +637,7 @@ IF %winbuild% LSS 14393 (
 )
 IF NOT "%EditionWMI%"=="" SET "EditionID=%EditionWMI%"
 IF /I "%EditionID%"=="IoTEnterprise" SET "EditionID=Enterprise"
-IF /I "%EditionID%"=="IoTEnterpriseS" SET "EditionID=EnterpriseS"
+IF /I "%EditionID%"=="IoTEnterpriseS" IF %winbuild% LSS 22610 SET "EditionID=EnterpriseS"
 IF /I "%EditionID%"=="ProfessionalSingleLanguage" SET "EditionID=Professional"
 IF /I "%EditionID%"=="ProfessionalCountrySpecific" SET "EditionID=Professional"
 IF /I "%EditionID%"=="EnterpriseG" SET Win10Gov=1
@@ -637,8 +646,8 @@ IF /I "%EditionID%"=="EnterpriseGN" SET Win10Gov=1
 :Main
 if defined EditionID (set "_winos=Windows %EditionID% edition") else (set "_winos=Detected Windows")
 for /f "skip=2 tokens=2*" %%a in ('reg query "HKLM\SOFTWARE\Microsoft\Windows NT\CurrentVersion" /v ProductName %_Nul6%') do if not errorlevel 1 set "_winos=%%b"
-set "nKMS=當前系統不支援 KMS 激活..."
-set "nEval=無法激活評估版。請安裝完整版Windows 操作系統。"
+set "nKMS=當前系統不支持 KMS 啟動..."
+set "nEval=無法啟動評估版.請安裝完整版Windows 操作系統."
 if exist "%SystemRoot%\Servicing\Packages\Microsoft-Windows-*EvalEdition~*.mum" set _eval=1
 if exist "%SystemRoot%\Servicing\Packages\Microsoft-Windows-Server*EvalEdition~*.mum" set "nEval=Server Evaluation cannot be activated. Please convert to full Server OS."
 if exist "%SystemRoot%\Servicing\Packages\Microsoft-Windows-Server*EvalCorEdition~*.mum" set _eval=1&set "nEval=Server Evaluation cannot be activated. Please convert to full Server OS."
@@ -662,7 +671,7 @@ if %_O14MSI% EQU 1 set "_C14R="
 set S_OK=1
 call :RunSPP
 if %ActOffice% NEQ 0 call :RunOSPP
-if %ActOffice% EQU 0 (echo.&echo Office 激活已關閉...)
+if %ActOffice% EQU 0 (echo.&echo Office 啟動已關閉...)
 if %S_OK% EQU 0 if %External% EQU 0 call :CheckFR
 
 if exist "!_temp!\crv*.txt" del /f /q "!_temp!\crv*.txt"
@@ -678,7 +687,7 @@ if %_verb% EQU 1 (
 echo.&echo %line3%&echo.
 if %External% EQU 0 if "%_rtr%"=="DoActivate" (
 echo.
-echo 確保在防毒軟體中排除此文件。
+echo 確保在防病毒保護中排除此文件.
 echo %SystemRoot%\System32\SppExtComObjHook.dll)
 )
 set External=0
@@ -687,7 +696,7 @@ if %uManual% EQU 1 timeout 5
 if %uAutoRenewal% EQU 1 timeout 5
 if %Unattend% NEQ 0 goto :TheEnd
 echo.
-echo 按任意見繼續...
+echo 敲任意鍵繼續...
 pause >nul
 goto :MainMenu
 
@@ -708,13 +717,13 @@ set "_qr=%_zz1% %spp% %_zz2% %_zz5%Description like '%%KMSCLIENT%%' %_zz6% %_zz3
 %_qr% %_Nul2% | findstr /i Windows %_Nul1% && (set WinVL=1)
 if %WinVL% EQU 0 (
 if %ActWindows% EQU 0 (
-  echo.&echo Windows 激活已關閉...
+  echo.&echo Windows 啟動已關閉...
   ) else (
   if %SSppHook% EQU 0 (
     echo.&echo %_winos% %nKMS%
     if defined _eval echo %nEval%
     ) else (
-    echo.&echo 當前系統KMS激活ID失敗^(s^) .&echo 可能sppsvc服務 或 SppExtComObjHook.dll 均不起作用。&echo 有關故障排除，請參閱"自述文件".
+    echo.&echo 當前系統KMS啟動ID失敗^(s^) .&echo 可能sppsvc服務 或 SppExtComObjHook.dll 均不起作用.&echo 有關故障排除，請參閱「自述文件」.
     exit /b
     )
   )
@@ -759,7 +768,7 @@ set "_qr=%_zz7% %spp% %_zz2% %_zz5%ApplicationID='%_wApp%' and Description like 
 if %W1nd0ws% EQU 1 if %ActWindows% NEQ 0 for /f "tokens=2 delims==" %%G in ('%_qr%') do (set app=%%G&call :sppchkwin)
 :: set "_qr=%_zz7% %spp% %_zz2% %_zz5%ApplicationID='%_wApp%' and Description like '%%KMSCLIENT%%' %addon% %_zz6% %_zz3% ID %_zz8%"
 :: if %ESU_EDT% EQU 1 if %ActWindows% NEQ 0 for /f "tokens=2 delims==" %%G in ('%_qr%') do (set app=%%G&call :esuchk)
-if %W1nd0ws% EQU 1 if %ActWindows% EQU 0 (echo.&echo Windows 激活已關閉...)
+if %W1nd0ws% EQU 1 if %ActWindows% EQU 0 (echo.&echo Windows 啟動已關閉...)
 set "_qr=%_zz7% %spp% %_zz2% %_zz5%ApplicationID='%_oApp%' and Description like '%%KMSCLIENT%%' %_zz6% %_zz3% ID %_zz8%"
 if %Off1ce% EQU 1 if %ActOffice% NEQ 0 for /f "tokens=2 delims==" %%G in ('%_qr%') do (set app=%%G&call :sppchkoff 1)
 if %_AUR% EQU 0 (
@@ -1090,7 +1099,7 @@ set aC2R19=0
 set aC2R16=0
 set aC2R15=0
 if %winbuild% LSS 9200 (set "aword=2010-2021") else (set "aword=2010")
-if %OsppHook% EQU 0 (echo.&echo 檢測到沒有安裝支援KMS38激活的 Office %aword% ...&exit /b)
+if %OsppHook% EQU 0 (echo.&echo 檢測到沒有安裝支持KMS38啟動的 Office %aword% ...&exit /b)
 if %winbuild% GEQ 9200 if %loc_off14% EQU 0 (echo.&echo 當前系統沒有安裝 Office %aword% ...&exit /b)
 set err_offsvc=0
 net start osppsvc /y %_Nul3% || (
@@ -1146,18 +1155,18 @@ if /i not "%~3"=="" for /f "tokens=2 delims==" %%A in ('%_qr% %_Nul6%') do set /
 set "_qr=%_zz7% %spp% %_zz2% %_zz5%LicenseFamily='Office%~5'%_zz6% %_zz3% LicenseStatus %_zz8%"
 if /i not "%~5"=="" for /f "tokens=2 delims==" %%A in ('%_qr% %_Nul6%') do set /a ls3=%%A
 if "%ls3%"=="1" (
-echo 檢測： %~6
-echo 產品已永久激活。
+echo 檢測: %~6
+echo 產品已永久啟動.
 exit /b
 )
 if "%ls2%"=="1" (
-echo 檢測： %~4
-echo 產品已永久激活。
+echo 檢測: %~4
+echo 產品已永久啟動.
 exit /b
 )
 if "%ls%"=="1" (
-echo 檢測： %~2
-echo 產品已永久激活。
+echo 檢測: %~2
+echo 產品已永久啟動.
 exit /b
 )
 call :insKey
@@ -1386,7 +1395,7 @@ if %ESU_ADD% EQU 0 for /f "tokens=2 delims==" %%x in ('%_qr%') do echo Installin
 if %ESU_ADD% EQU 1 for /f "tokens=2 delims==f" %%x in ('%_qr%') do echo Installing Key: %%x
 set ESU_ADD=0
 call :keys %app%
-if "%_key%"=="" (echo 找不到匹配的 KMS 客戶端密鑰&exit /b)
+if "%_key%"=="" (echo 找不到匹配的 KMS 用戶端金鑰&exit /b)
 set "_qr=wmic path %sps% where Version='%slsv%' call InstallProductKey ProductKey="%_key%""
 if %WMI_VBS% NEQ 0 set "_qr=%_csp% %sps% "%_key%""
 %_qr% %_Nul3%
@@ -1415,7 +1424,7 @@ reg add "HKLM\%SPPk%\%_wApp%\%app%" /f /v KeyManagementServiceName /t REG_SZ /d 
 reg add "HKLM\%SPPk%\%_wApp%\%app%" /f /v KeyManagementServicePort /t REG_SZ /d "%KMS_Port%" %_Nul3%
 reg add "HKU\S-1-5-20\%SPPk%\%_wApp%\%app%" /f /v DiscoveredKeyManagementServiceIpAddress /t REG_SZ /d "127.0.0.2" %_Nul3%
 for /f "tokens=2 delims==" %%x in ('%_qr%') do echo Checking: %%x
-echo 當前系統已採用KMS2038激活。
+echo 當前系統已採用KMS2038啟動.
 exit /b
 )
 set "_qr=%_zz7% %spp% %_zz2% %_zz5%ID='%app%'%_zz6% %_zz3% Name %_zz8%"
@@ -1427,19 +1436,19 @@ if %WMI_VBS% NEQ 0 set "_qr=%_csm% "%spp%.ID='%app%'" Activate"
 %_qr% %_Nul3%
 call set ERRORCODE=%ERRORLEVEL%
 if %ERRORCODE% EQU -1073418187 (
-echo 產品激活失敗： 0xC004F035
+echo 產品啟動失敗: 0xC004F035
 if %OSType% EQU Win7 echo Windows 7 cannot be KMS-activated on this computer due to unqualified OEM BIOS.
-echo 有關詳情請參見自述文件。
+echo 有關詳情請參見自述文件.
 exit /b
 )
 if %ERRORCODE% EQU -1073417728 (
-echo 產品激活失敗： 0xC004F200
+echo 產品啟動失敗: 0xC004F200
 echo Windows needs to rebuild the activation-related files.
-echo 有關詳情請參見自述文件。KB2736303.
+echo 有關詳情請參見KB2736303.
 exit /b
 )
 if %ERRORCODE% EQU -1073422315 (
-echo 當前產品激活失敗： 0xC004E015
+echo 當前產品啟動失敗: 0xC004E015
 echo 可以嘗試運行 slmgr.vbs /rilc.
 cscript //Nologo //B %SysPath%\slmgr.vbs /rilc
 )
@@ -1453,8 +1462,8 @@ set gpr2=0
 set "_qr=%_zz7% %spp% %_zz2% %_zz5%ID='%app%'%_zz6% %_zz3% GracePeriodRemaining %_zz8%"
 for /f "tokens=2 delims==" %%x in ('%_qr%') do (set gpr=%%x&set /a "gpr2=(%%x+1440-1)/1440")
 if %ERRORCODE% EQU 0 if %gpr% EQU 0 (
-echo 當前激活成功，但剩餘期限為增加。
-if %OSType% EQU Win7 echo 可能與KB4487266補丁描述的中錯誤有關
+echo 產品啟動成功，但剩餘期限未增加。
+if %OSType% EQU Win7 echo 可能與KB4487266補丁中描述的錯誤有關
 exit /b
 )
 set Act_OK=0
@@ -1463,17 +1472,17 @@ if %gpr% EQU 64800 set Act_OK=1
 if %gpr% GTR 259200 if %Win10Gov% EQU 1 set Act_OK=1
 if %gpr% EQU 259200 set Act_OK=1
 if %ERRORCODE% EQU 0 if %Act_OK% EQU 1 (
-echo 產品激活成功
-echo 剩餘期限： %gpr2% 天 ^(%gpr% 分鐘^)
+echo 產品啟動成功
+echo 剩餘期限: %gpr2% 天 ^(%gpr% 分鐘^)
 exit /b
 )
 cmd /c exit /b %ERRORCODE%
 if %ERRORCODE% NEQ 0 (
-echo 產品激活失敗： 0x!=ExitCode!
+echo 產品啟動失敗: 0x!=ExitCode!
 ) else (
-echo 產品激活失敗
+echo 產品啟動失敗
 )
-echo 剩餘期限： %gpr2% 天 ^(%gpr% 分鐘^)
+echo 剩餘期限: %gpr2% 天 ^(%gpr% 分鐘^)
 set S_OK=0
 exit /b
 
@@ -1539,7 +1548,7 @@ if %SSppHook% NEQ 0 if not exist %w7inf% (
   echo [WTR]
   echo Name="KMS_VL_ALL"
   echo.
-  echo [WTR.W8]
+  echo [WTR.*]
   echo NotifyUser="No"
   echo.
   echo [System.Registry]
@@ -1570,9 +1579,9 @@ mode con cols=100 lines=32
 if %Unattend% EQU 0 title %_title%
 )
 echo.&echo %line3%&echo.
-echo 正在移除本地 KMS 服務端激活...
+echo 正在移除本地KMS服務端啟動...
 echo.
-echo 正在刪除文件 %RemExc%...
+echo 正在刪除文件%RemExc%...
 )
 for %%# in (SppExtComObjHookAvrf.dll,SppExtComObjHook.dll,SppExtComObjPatcher.dll,SppExtComObjPatcher.exe) do if exist "%SysPath%\%%#" (
 	if %_verb% EQU 1 echo %SystemRoot%\System32\%%#
@@ -1596,7 +1605,7 @@ for %%# in (SppExtComObj.exe,sppsvc.exe,osppsvc.exe) do reg query "%IFEO%\%%#" %
 if %OSType% EQU Win8 schtasks /query /tn "%_TaskEx%" %_Nul3% && (
 if %_verb% EQU 1 (
 echo.
-echo 正在刪除計畫任務...
+echo 正在刪除計劃任務...
 echo %_TaskEx%
 )
 schtasks /delete /f /tn "%_TaskEx%" %_Nul3%
@@ -1632,7 +1641,7 @@ if %OsppHook% EQU 0 (
 reg delete "%IFEO%\%1" /f %_Null%
 )
 if %OsppHook% NEQ 0 for %%A in (Debugger,VerifierDlls,VerifierDebug,VerifierFlags,GlobalFlag,KMS_Emulation,KMS_ActivationInterval,KMS_RenewalInterval,Office2010,Office2013,Office2016,Office2019) do reg delete "%IFEO%\%1" /v %%A /f %_Null%
-reg add "HKLM\%OPPk%" /f /v KeyManagementServiceName /t REG_SZ /d "0.0.0.0" %_Nul3%
+reg add "HKLM\%OPPk%" /f /v KeyManagementServiceName /t REG_SZ /d "%_uIP%" %_Nul3%
 reg add "HKLM\%OPPk%" /f /v KeyManagementServicePort /t REG_SZ /d "1688" %_Nul3%
 goto :eof
 
@@ -1658,10 +1667,10 @@ goto :eof
 if not exist %_Hook% (
 echo.
 echo %_err%
-echo 當前系統以下文件丟失。
+echo 當前系統以下文件遺失.
 echo "%SystemRoot%\System32\SppExtComObjHook.dll"
 echo.
-echo 請檢查防毒軟體是否停止或文件路徑是否已添加到排除。
+echo 請檢查防病毒軟體是否停止或文件路徑是否已添加到排除.
 )
 
 for /f "skip=1 tokens=* delims=" %%# in ('certutil -hashfile %_Hook% SHA1^|findstr /i /v CertUtil') do set "_hash=%%#"
@@ -1669,12 +1678,12 @@ set "_hash=%_hash: =%"
 if /i not "%_hash%"=="%_orig%" (
 echo.
 echo %_err%
-echo 驗證當前系統的以下文件MD5訊息失敗。
+echo 驗證當前系統的以下文件MD5訊息失敗.
 echo "%SystemRoot%\System32\SppExtComObjHook.dll"
 echo Expected: %_orig%
 echo Detected: %_hash%
 echo.
-echo 請檢查防毒軟體是否停止或文件路徑是否已添加到排除。
+echo 請檢查防病毒軟體是否停止或文件路徑是否已添加到排除.
 )
 
 set E_REG=0
@@ -1684,11 +1693,11 @@ reg query "%IFEO%\%SppVer%" /v %%A %_Nul3% || set E_REG=1
 if %E_REG% EQU 1 (
 echo.
 echo %_err%
-echo 當前系統缺少某些或全部必須的註冊表項
+echo 當前系統缺少某些或全部必需的註冊表鍵值.
 echo [%IFEO%\%SppVer%]
 echo VerifierDlls, VerifierDebug, VerifierFlags, GlobalFlag, KMS_Emulation
 echo.
-echo 請檢查防毒軟體是否停止或文件路徑是否已添加到排除。
+echo 請檢查防病毒軟體是否停止或文件路徑是否已添加到排除.
 )
 set E_REG=0
 if %OsppHook% NEQ 0 for %%A in (VerifierDlls,VerifierDebug,VerifierFlags,GlobalFlag,KMS_Emulation) do (
@@ -1697,49 +1706,56 @@ reg query "%IFEO%\osppsvc.exe" /v %%A %_Nul3% || set E_REG=1
 if %E_REG% EQU 1 (
 echo.
 echo %_err%
-echo 當前系統缺少某些獲全部必須的註冊表鍵值。
+echo 當前系統缺少某些或全部必需的註冊表鍵值.
 echo [%IFEO%\osppsvc.exe]
 echo VerifierDlls, VerifierDebug, VerifierFlags, GlobalFlag, KMS_Emulation
 echo.
-echo 請檢查防毒軟體是否停止或文件路徑是否已添加到排除。
+echo 請檢查防病毒軟體是否停止或文件路徑是否已添加到排除.
 )
 
-set E_WMI=0
-for /f "skip=2 tokens=2*" %%a in ('reg query HKLM\SYSTEM\CurrentControlSet\Services\WinMgmt /v Start %_Nul6%') do if /i %%b equ 0x4 set E_WMI=1
-set "_qr=%_zz1% Win32_ComputerSystem %_zz3% CreationClassName %_zz4%"
-%_qr% %_Nul2% | find /i "computersystem" %_Nul1%
-if %errorlevel% NEQ 0 set E_WMI=1
-set "_qr=%_zz1% SoftwareLicensingService %_zz3% Version %_zz4%"
-%_qr% %_Nul2% | find /i "." %_Nul1%
-if %errorlevel% NEQ 0 set E_WMI=1
-if %E_WMI% EQU 1 (
+set WMIe=0
+call :CheckWS
+if %WMIe% EQU 1 (
 echo.
 echo %_err%
 echo 運行WMI查詢檢測失敗。
 echo.
-echo 需要驗證服務是否正常運行：:
+echo 需要驗證服務是否正常運行:
 echo Windows管理規範[WinMgmt]
 echo Windows軟體保護[sppsvc]
 )
+goto :eof
 
+:CheckWS
+set "_qrw=%_zz1% Win32_ComputerSystem %_zz3% CreationClassName %_zz4%"
+set "_qrs=%_zz1% SoftwareLicensingService %_zz3% Version %_zz4%"
+
+%_qrs% %_Nul2% | findstr /r "[0-9]*\.[0-9]*\.[0-9]*\.[0-9]*" %_Nul1% || (
+  set WMIe=1
+  %_qrw% %_Nul2% | find /i "ComputerSystem" %_Nul1% && (
+    echo 發生錯誤: SPP 沒有響應
+    ) || (
+    echo 發生錯誤: WMI ^& SPP 沒有響應
+  )
+)
 goto :eof
 
 :cREG
-reg add "HKLM\%SPPk%" /f /v KeyManagementServiceName /t REG_SZ /d "0.0.0.0"
+reg add "HKLM\%SPPk%" /f /v KeyManagementServiceName /t REG_SZ /d "%_uIP%"
 reg add "HKLM\%SPPk%" /f /v KeyManagementServicePort /t REG_SZ /d "1688"
 reg delete "HKLM\%SPPk%" /f /v DisableDnsPublishing
 reg delete "HKLM\%SPPk%" /f /v DisableKeyManagementServiceHostCaching
 reg delete "HKLM\%SPPk%\%_wApp%" /f
 if %winbuild% GEQ 9200 (
 if not %xOS%==x86 (
-reg add "HKLM\%SPPk%" /f /v KeyManagementServiceName /t REG_SZ /d "0.0.0.0" /reg:32
+reg add "HKLM\%SPPk%" /f /v KeyManagementServiceName /t REG_SZ /d "%_uIP%" /reg:32
 reg add "HKLM\%SPPk%" /f /v KeyManagementServicePort /t REG_SZ /d "1688" /reg:32
 reg delete "HKLM\%SPPk%\%_oApp%" /f /reg:32
-reg add "HKLM\%SPPk%\%_oApp%" /f /v KeyManagementServiceName /t REG_SZ /d "0.0.0.0" /reg:32
+reg add "HKLM\%SPPk%\%_oApp%" /f /v KeyManagementServiceName /t REG_SZ /d "%_uIP%" /reg:32
 reg add "HKLM\%SPPk%\%_oApp%" /f /v KeyManagementServicePort /t REG_SZ /d "1688" /reg:32
 )
 reg delete "HKLM\%SPPk%\%_oApp%" /f
-reg add "HKLM\%SPPk%\%_oApp%" /f /v KeyManagementServiceName /t REG_SZ /d "0.0.0.0"
+reg add "HKLM\%SPPk%\%_oApp%" /f /v KeyManagementServiceName /t REG_SZ /d "%_uIP%"
 reg add "HKLM\%SPPk%\%_oApp%" /f /v KeyManagementServicePort /t REG_SZ /d "1688"
 )
 if %winbuild% GEQ 9600 (
@@ -1749,7 +1765,7 @@ reg delete "HKU\S-1-5-20\%SPPk%\%_oApp%" /f
 if %OsppHook% EQU 0 (
 goto :eof
 )
-reg add "HKLM\%OPPk%" /f /v KeyManagementServiceName /t REG_SZ /d "0.0.0.0"
+reg add "HKLM\%OPPk%" /f /v KeyManagementServiceName /t REG_SZ /d "%_uIP%"
 reg delete "HKLM\%OPPk%" /f /v KeyManagementServicePort
 reg delete "HKLM\%OPPk%" /f /v DisableDnsPublishing
 reg delete "HKLM\%OPPk%" /f /v DisableKeyManagementServiceHostCaching
@@ -1785,7 +1801,7 @@ goto :eof
 
 :cCache
 echo.
-echo 清除 KMS 暫存...
+echo 清除KMS快取...
 call :rREG %_Nul3%
 set "_C16R="
 for /f "skip=2 tokens=2*" %%a in ('"reg query HKLM\SOFTWARE\Microsoft\Office\ClickToRun /v InstallPath" %_Nul6%') do if exist "%%b\root\Licenses16\ProPlus*.xrm-ms" set "_C16R=1"
@@ -1799,7 +1815,7 @@ echo please apply manual or auto-renewal activation, and don't uninstall afterwa
 )
 if %Unattend% NEQ 0 goto :TheEnd
 echo.&echo %line3%&echo.
-echo 按任意見繼續...
+echo 敲任意鍵繼續...
 pause >nul
 goto :MainMenu
 
@@ -1824,7 +1840,7 @@ if exist "!_temp!\SvcTrigger.xml" (
 )
 schtasks /query /tn "%_TaskEx%" %_Nul3% && if %_verb% EQU 1 (
 echo.
-echo 添加計畫任務...
+echo 添加計劃任務...
 echo %_TaskEx%
 )
 goto :eof
@@ -1844,12 +1860,12 @@ goto :eof
 cls
 if exist "!_oem!\$OEM$\" (
 echo.&echo %line3%&echo.
-echo $OEM$ 文件已存在...
+echo $OEM$ 文件夾已存在...
 echo "!_oem!\$OEM$"
 echo.
-echo 如果要創建新復本請手動將其刪除
+echo 如果要創建新副本請手動將其刪除.
 echo.&echo %line3%&echo.
-echo 按任意鍵繼續...
+echo 敲任意鍵繼續...
 pause >nul
 goto :eof
 )
@@ -1867,7 +1883,44 @@ echo.
 echo "!_oem!\$OEM$"
 echo.&echo %line3%&echo.
 echo.
-echo 按任意鍵繼續...
+echo 敲任意鍵繼續...
+pause >nul
+goto :eof
+
+:CreateBIN
+cls
+if exist "!_oem!\KMS_VL_ALL_AIO-bin\*.dll" if exist "!_oem!\KMS_VL_ALL_AIO-bin\*.cab" (
+echo.&echo %line3%&echo.
+echo 二進位制文件夾已經存在...
+echo "!_oem!\KMS_VL_ALL_AIO-bin"
+echo.
+echo 如果想創建一個新副本，請手動刪除它.
+echo.&echo %line3%&echo.
+echo 敲任意鍵繼續...
+pause >nul
+goto :eof
+)
+if not exist "!_oem!\KMS_VL_ALL_AIO-bin\*.dll" mkdir "!_oem!\KMS_VL_ALL_AIO-bin"
+pushd "!_oem!\KMS_VL_ALL_AIO-bin"
+%_Nul3% rmdir /s /q .
+setlocal
+set "TMP=%SystemRoot%\Temp"
+set "TEMP=%SystemRoot%\Temp"
+%_Nul3% %_psc% "cd -Lit($env:__CD__); $f=[IO.File]::ReadAllText('!_batp!') -split ':embdbin\:.*'; iex($f[1]); 2..6|%%{[BAT85]::Decode($_, $f[$_])}"
+endlocal
+%_Nul3% ren 2 SppExtComObjHook-x86.dll
+%_Nul3% ren 3 SppExtComObjHook-x64.dll
+%_Nul3% ren 4 SppExtComObjHook-arm64.dll
+%_Nul3% ren 5 cleanospp-x86.cab
+%_Nul3% ren 6 cleanospp-x64.cab
+popd
+echo.&echo %line3%&echo.
+echo 已成功創建二進位制文件夾...
+echo.
+echo "!_oem!\KMS_VL_ALL_AIO-bin"
+echo.&echo %line3%&echo.
+echo.
+echo 敲任意鍵繼續...
 pause >nul
 goto :eof
 
@@ -1886,6 +1939,7 @@ set error1=%errorlevel%
 sc query OfficeSvc %_Nul3%
 set error2=%errorlevel%
 if %error1% EQU 1060 if %error2% EQU 1060 (
+echo 發生錯誤: 未檢測到 Office C2R 安裝服務
 goto :%_fC2R%
 )
 set _Office16=0
@@ -1903,6 +1957,7 @@ for /f "skip=2 tokens=2*" %%a in ('"reg query HKLM\SOFTWARE\WOW6432Node\Microsof
   set _Office15=1
 )
 if %_Office16% EQU 0 if %_Office15% EQU 0 (
+echo 發生錯誤: 未檢測到 Office C2R 安裝路徑
 goto :%_fC2R%
 )
 
@@ -1932,13 +1987,13 @@ set "_LicensesPath=%_InstallRoot%\Licenses16"
 set "_Integrator=%_InstallRoot%\integration\integrator.exe"
 for /f "skip=2 tokens=2*" %%a in ('"reg query %_PRIDs% /v ActiveConfiguration" %_Nul6%') do set "_PRIDs=%_PRIDs%\%%b"
 if "%_ProductIds%"=="" (
-if %_Office15% EQU 0 (goto :%_fC2R%) else (goto :Reg15istry)
+if %_Office15% EQU 0 (echo 發生錯誤: 未檢測到 Office C2R 產品編號文件&goto :%_fC2R%) else (goto :Reg15istry)
 )
 if not exist "%_LicensesPath%\ProPlus*.xrm-ms" (
-if %_Office15% EQU 0 (goto :%_fC2R%) else (goto :Reg15istry)
+if %_Office15% EQU 0 (echo 發生錯誤: 未檢測到 Office C2R 許可金鑰文件&goto :%_fC2R%) else (goto :Reg15istry)
 )
 if not exist "%_Integrator%" (
-if %_Office15% EQU 0 (goto :%_fC2R%) else (goto :Reg15istry)
+if %_Office15% EQU 0 (echo 發生錯誤: 未檢測到 Office C2R 許可集成工具&goto :%_fC2R%) else (goto :Reg15istry)
 )
 if exist "%_LicensesPath%\Word2019VL_KMS_Client_AE*.xrm-ms" (set "_tag=2019"&set "_ons= 2019")
 if exist "%_LicensesPath%\Word2021VL_KMS_Client_AE*.xrm-ms" (set _LTSC=1)
@@ -1989,13 +2044,13 @@ if exist "%ProgramFiles%\Microsoft Office\Office15\OSPP.VBS" (
   set "_OSPP15VBS=%ProgramFiles(x86)%\Microsoft Office\Office15\OSPP.VBS"
 )
 if "%_Product15Ids%"=="" (
-if %_Office16% EQU 0 (goto :%_fC2R%) else (goto :CheckC2R)
+if %_Office16% EQU 0 (echo 發生錯誤: 未檢測到 Office 2013 C2R 產品編號文件&goto :%_fC2R%) else (goto :CheckC2R)
 )
 if not exist "%_Licenses15Path%\ProPlus*.xrm-ms" (
-if %_Office16% EQU 0 (goto :%_fC2R%) else (goto :CheckC2R)
+if %_Office16% EQU 0 (echo 發生錯誤: 未檢測到 Office 2013 C2R 許可金鑰文件&goto :%_fC2R%) else (goto :CheckC2R)
 )
 if %winbuild% LSS 9200 if not exist "%_OSPP15VBS%" (
-if %_Office16% EQU 0 (goto :%_fC2R%) else (goto :CheckC2R)
+if %_Office16% EQU 0 (echo 發生錯誤: 未檢測到 Office 2013 C2R 許可證工具 OSPP.vbs&goto :%_fC2R%) else (goto :CheckC2R)
 )
 
 :CheckC2R
@@ -2021,6 +2076,8 @@ set "_wmi="
 set "_qr=%_zz7% %_sps% %_zz3% Version %_zz8%"
 for /f "tokens=2 delims==" %%# in ('%_qr%') do set _wmi=%%#
 if "%_wmi%"=="" (
+echo 發生錯誤: 未檢測到 %_sps% WMI 版本
+call :CheckWS
 goto :%_fC2R%
 )
 set _Identity=0
@@ -2183,17 +2240,17 @@ find /i "Office16MondoVL_KMS_Client" "!_temp!\crvVolume.txt" %_Nul1% && (
 if %sub_O365% EQU 1 (
   for %%a in (%_Suites%) do set _%%a=0
 echo.
-echo Microsoft 365 產品已通過訂閱方式激活
+echo Microsoft 365 產品已透過訂閱方式啟動
 )
 if %sub_proj% EQU 1 (
   for %%a in (%_PrjSKU%) do set _%%a=0
 echo.
-echo Microsoft Project 產品已通過訂閱方式激活
+echo Microsoft Project 產品已透過訂閱方式啟動.
 )
 if %sub_vis% EQU 1 (
   for %%a in (%_VisSKU%) do set _%%a=0
 echo.
-echo Microsoft Visio 產品已通過訂閱方式激活
+echo Microsoft Visio 產品已透過訂閱方式啟動.
 )
 
 for %%a in (%_RetIds%,ProPlus) do if !_%%a! EQU 1 (
@@ -2201,7 +2258,7 @@ set _C16Msg=1
 )
 if %_C16Msg% EQU 1 (
 echo.
-echo 將 Office C2R 零售版轉換為批量版：
+echo 將 Office C2R 零售版轉換為批次版:
 )
 if %_C16Msg% EQU 0 (if %_Office15% EQU 1 (goto :R15V) else (goto :GVLKC2R))
 
@@ -2431,7 +2488,7 @@ set _C15Msg=1
 )
 if %_C15Msg% EQU 1 if %_C16Msg% EQU 0 (
 echo.
-echo 將 Office C2R 零售版轉換為批量版：
+echo 將 Office C2R 零售版轉換為批次版:
 )
 if %_C15Msg% EQU 0 goto :GVLKC2R
 
@@ -2576,7 +2633,7 @@ goto :%_sC2R%
 cls
 mode con cols=100 lines=32
 %_Nul3% %_psc% "&%_buf%"
-title 檢測激活狀態 [採用VBS命令]
+title 檢測啟動狀態 [採用VBS命令]
 setlocal
 set _sO16vbs=0
 set _sO15vbs=0
@@ -2588,7 +2645,7 @@ if exist "%ProgramFiles%\Microsoft Office\Office15\ospp.vbs" (
   set _sO15vbs=1
 )
 echo %line2%
-echo ***                   Windows 激活狀態                   ***
+echo ***                   Windows 啟動狀態                   ***
 echo %line2%
 pushd "!_utemp!"
 copy /y %SystemRoot%\System32\slmgr.vbs . >nul 2>&1
@@ -2607,9 +2664,9 @@ set _sO16vbs=1
 echo.
 echo %line2%
 if %_sO15vbs% EQU 0 (
-echo ***              Office 2016 %_bit%位 激活狀態              ***
+echo ***              Office 2016 %_bit%位 啟動狀態              ***
 ) else (
-echo ***              Office 2013/2016 激活狀態               ***
+echo ***              Office 2013/2016 啟動狀態               ***
 )
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
@@ -2622,9 +2679,10 @@ set _sO16vbs=1
 echo.
 echo %line2%
 if %_sO15vbs% EQU 0 (
-echo ***              Office 2016 32位 激活狀態               ***
+echo ***              Office 2016 32位 啟動狀態               ***
 ) else (
-echo ***              Office 2013/2016 激活狀態
+echo ***              Office 2013/2016 啟動狀態                ***
+)
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
 )
@@ -2636,7 +2694,7 @@ for /f "skip=2 tokens=2*" %%a in ('"reg query HKLM\SOFTWARE\Microsoft\Office\15.
 if exist "!office!\ospp.vbs" (
 echo.
 echo %line2%
-echo ***              Office 2013 %_bit%位 激活狀態               ***
+echo ***              Office 2013 %_bit%位 啟動狀態               ***
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
 )
@@ -2646,7 +2704,7 @@ for /f "skip=2 tokens=2*" %%a in ('"reg query HKLM\SOFTWARE\Wow6432Node\Microsof
 if exist "!office!\ospp.vbs" (
 echo.
 echo %line2%
-echo ***              Office 2013 32位 激活狀態               ***
+echo ***              Office 2013 32位 啟動狀態               ***
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
 )
@@ -2657,7 +2715,7 @@ for /f "skip=2 tokens=2*" %%a in ('"reg query HKLM\SOFTWARE\Microsoft\Office\14.
 if exist "!office!\ospp.vbs" (
 echo.
 echo %line2%
-echo ***              Office 2010 %_bit%位 激活狀態               ***
+echo ***              Office 2010 %_bit%位 啟動狀態               ***
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
 )
@@ -2667,7 +2725,7 @@ for /f "skip=2 tokens=2*" %%a in ('"reg query HKLM\SOFTWARE\Wow6432Node\Microsof
 if exist "!office!\ospp.vbs" (
 echo.
 echo %line2%
-echo ***              Office 2010 32位 激活數位狀態               ***
+echo ***              Office 2010 32位 啟動啟動狀態               ***
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
 )
@@ -2683,9 +2741,9 @@ set _sO16vbs=1
 echo.
 echo %line2%
 if %_sO15vbs% EQU 0 (
-echo ***              Office 2016-2021 C2R 激活狀態            ***
+echo ***              Office 2016-2021 C2R 啟動狀態            ***
 ) else (
-echo ***                Office 2013-2021 激活狀態              ***
+echo ***                Office 2013-2021 啟動狀態              ***
 )
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
@@ -2698,9 +2756,9 @@ set _sO16vbs=1
 echo.
 echo %line2%
 if %_sO15vbs% EQU 0 (
-echo ***              Office 2016-2021 C2R 激活狀態            ***
+echo ***              Office 2016-2021 C2R 啟動狀態            ***
 ) else (
-echo ***                Office 2013-2021 激活狀態              ***
+echo ***                Office 2013-2021 啟動狀態              ***
 )
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
@@ -2722,7 +2780,7 @@ if exist "%ProgramFiles%\Microsoft Office\Office15\ospp.vbs" (
 if exist "!office!\ospp.vbs" (
 echo.
 echo %line2%
-echo ***              Office 2013 C2R 激活狀態                ***
+echo ***              Office 2013 C2R 啟動狀態                ***
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
 )
@@ -2741,14 +2799,14 @@ if exist "%ProgramFiles%\Microsoft Office\Office14\ospp.vbs" (
 if exist "!office!\ospp.vbs" (
 echo.
 echo %line2%
-echo ***              Office 2010 C2R 激活狀態                ***
+echo ***              Office 2010 C2R 啟動狀態                ***
 echo %line2%
 cscript //nologo "!office!\ospp.vbs" /dstatus
 )
 
 :casVend
 echo.
-echo 按任意鍵繼續...
+echo 敲任意鍵繼續...
 pause >nul
 goto :eof
 
@@ -2756,7 +2814,7 @@ goto :eof
 cls
 mode con cols=100 lines=32
 %_Nul3% %_psc% "&%_buf%"
-title 檢測激活狀態 [採用wmic命令]
+title 檢測啟動狀態 [採用wmic命令]
 setlocal
 set wspp=SoftwareLicensingProduct
 set wsps=SoftwareLicensingService
@@ -2791,11 +2849,11 @@ if %winbuild% LSS 9200 call :casWpkey %ospp% %o15App% osppsvc ospp15
 )
 
 echo %line2%
-echo ***                   Windows 激活狀態                   ***
+echo ***                   Windows 啟動狀態                   ***
 echo %line2%
 if not defined cW1nd0ws (
 echo.
-echo 錯誤：找不到產品密鑰
+echo 錯誤：找不到產品金鑰.
 goto :casWcon
 )
 set winID=1
@@ -2816,7 +2874,7 @@ if defined osppsvc goto :casWospp
 goto :casWend
 )
 echo %line2%
-echo ***                   Office 激活狀態                   ***
+echo ***                   Office 啟動狀態                   ***
 echo %line2%
 set "_qr=%_zz7% %wspp% %_zz2% %_zz5%ApplicationID='%o15App%' and PartialProductKey is not null%_zz6% %_zz3% ID %_zz8%"
 for /f "tokens=2 delims==" %%# in ('%_qr%') do (
@@ -2833,7 +2891,7 @@ goto :casWend
 :casWospp
 if %verbose% EQU 1 (
 echo %line2%
-echo ***                   Office 激活狀態                   ***
+echo ***                   Office 啟動狀態                   ***
 echo %line2%
 )
 set "_qr=%_zz7% %ospp% %_zz2% %_zz5%ApplicationID='%o15App%' and PartialProductKey is not null%_zz6% %_zz3% ID %_zz8%"
@@ -2877,13 +2935,13 @@ echo %Description%| findstr /i TIMEBASED_ 1>nul && (set cTblClient=1&set _mTag=T
 echo %Description%| findstr /i VIRTUAL_MACHINE_ACTIVATION 1>nul && (set cAvmClient=1&set _mTag=Automatic VM)
 cmd /c exit /b %LicenseStatusReason%
 set "LicenseReason=%=ExitCode%"
-set "LicenseMsg=剩餘時間： %GracePeriodRemaining% 分鐘 (%_gpr% 天)"
+set "LicenseMsg=剩餘時間: %GracePeriodRemaining% 分鐘 (%_gpr% 天)"
 if %_gpr% GEQ 1 if %_WSH% EQU 1 (
 for /f "tokens=* delims=" %%# in ('%_csx% %GracePeriodRemaining%') do set "_xpr=%%#"
 )
 if %_gpr% GEQ 1 if %_prsh% EQU 1 if not defined _xpr (
 for /f "tokens=* delims=" %%# in ('%_psc% "$([DateTime]::Now.addMinutes(%GracePeriodRemaining%)).ToString('yyyy-MM-dd HH:mm:ss')" 2^>nul') do set "_xpr=%%#"
-title 檢查激活狀態 [wmic]
+title 檢查啟動狀態 [wmic]
 )
 
 if %LicenseStatus% EQU 0 (
@@ -2894,10 +2952,10 @@ if %LicenseStatus% EQU 1 (
 set "License=已授權"
 set "LicenseMsg="
 if %GracePeriodRemaining% EQU 0 (
-  if %winID% EQU 1 (set "ExpireMsg=此電腦已永久激活。") else (set "ExpireMsg=產品已永久激活。")
+  if %winID% EQU 1 (set "ExpireMsg=此計算機已永久啟動.") else (set "ExpireMsg=產品已永久啟動.")
   ) else (
-  set "LicenseMsg=%_mTag% 激活期限: %GracePeriodRemaining% 分鐘 (%_gpr% 天)"
-  if defined _xpr set "ExpireMsg=%_mTag% 激活期限 %_xpr%"
+  set "LicenseMsg=%_mTag% 啟動期限: %GracePeriodRemaining% 分鐘 (%_gpr% 天)"
+  if defined _xpr set "ExpireMsg=%_mTag% 啟動期限 %_xpr%"
   )
 )
 if %LicenseStatus% EQU 2 (
@@ -2930,12 +2988,12 @@ set "LicenseMsg="
 if not defined cKmsClient exit /b
 
 if %KeyManagementServicePort%==0 set KeyManagementServicePort=1688
-set "KmsReg=已註冊的 KMS 電腦名稱： %KeyManagementServiceMachine%:%KeyManagementServicePort%"
-if "%KeyManagementServiceMachine%"=="" set "KmsReg=已註冊的 KMS 電腦名稱： KMS 名稱不可用"
+set "KmsReg=已註冊的 KMS 計算機名稱: %KeyManagementServiceMachine%:%KeyManagementServicePort%"
+if "%KeyManagementServiceMachine%"=="" set "KmsReg=已註冊的 KMS 計算機名稱: KMS 名稱不可用"
 
 if %DiscoveredKeyManagementServiceMachinePort%==0 set DiscoveredKeyManagementServiceMachinePort=1688
 set "KmsDns=KMS machine name from DNS: %DiscoveredKeyManagementServiceMachineName%:%DiscoveredKeyManagementServiceMachinePort%"
-if "%DiscoveredKeyManagementServiceMachineName%"=="" set "KmsDns=DNS 自動發現： KMS 名稱不可用"
+if "%DiscoveredKeyManagementServiceMachineName%"=="" set "KmsDns=DNS 自動發現: KMS 名稱不可用"
 
 set "_qr="wmic path %~2 get ClientMachineID, KeyManagementServiceHostCaching /value" ^| findstr ^="
 if %WMI_VBS% NEQ 0 set "_qr=%_csg% %~2 "ClientMachineID, KeyManagementServiceHostCaching""
@@ -2963,51 +3021,51 @@ exit /b
 
 :casWout
 echo.
-echo 名稱： %Name%
-echo 描述： %Description%
-echo 激活 ID: %ID%
+echo 名稱: %Name%
+echo 描述: %Description%
+echo 啟動 ID: %ID%
 echo 擴展 PID: %ProductKeyID%
-if defined ProductKeyChannel echo 產品密鑰類型： %ProductKeyChannel%
-echo 部分產品密鑰： %PartialProductKey%
-echo 許可證狀態： %License%
+if defined ProductKeyChannel echo 產品金鑰類型: %ProductKeyChannel%
+echo 部分產品金鑰: %PartialProductKey%
+echo 許可證狀態: %License%
 if defined LicenseMsg echo %LicenseMsg%
 if not %LicenseStatus%==0 if not %EvaluationEndDate:~0,8%==16010101 echo Evaluation End Date: %EvaluationEndDate:~0,4%-%EvaluationEndDate:~4,2%-%EvaluationEndDate:~6,2% %EvaluationEndDate:~8,2%:%EvaluationEndDate:~10,2% UTC
 if not defined cKmsClient (
 if defined ExpireMsg echo.&echo.    %ExpireMsg%
 exit /b
 )
-if defined VLActivationTypeEnabled echo 已配置的激活類型： %VLActivationType%
+if defined VLActivationTypeEnabled echo 已配置的啟動類型: %VLActivationType%
 echo.
 if not %LicenseStatus%==1 (
-echo 激活產品已更新 KMS 客戶端訊息值。
+echo 啟動產品以更新 KMS 用戶端訊息值.
 exit /b
 )
-echo 最新激活訊息：
-echo 密鑰管理服務可戶端訊息
-echo.    客戶端 ID (CMID): %ClientMachineID%
+echo 最新啟動訊息:
+echo 金鑰管理服務用戶端訊息
+echo.    用戶端 ID (CMID): %ClientMachineID%
 echo.    %KmsDns%
 echo.    %KmsReg%
-if defined DiscoveredKeyManagementServiceMachineIpAddress echo.    KMS 電腦 IP 地址： %DiscoveredKeyManagementServiceMachineIpAddress%
-echo.    KMS 電腦擴展 PID: %KeyManagementServiceProductKeyID%
-echo.    激活間隔： %VLActivationInterval% 分鐘
-echo.    更新間隔： %VLRenewalInterval% 分鐘
-echo.    KMS 主機緩存： %KeyManagementServiceHostCaching%
-if defined KeyManagementServiceLookupDomain echo.    KMS SRV 紀錄查找域： %KeyManagementServiceLookupDomain%
+if defined DiscoveredKeyManagementServiceMachineIpAddress echo.    KMS 計算機 IP 地址: %DiscoveredKeyManagementServiceMachineIpAddress%
+echo.    KMS 計算機擴展 PID: %KeyManagementServiceProductKeyID%
+echo.    啟動間隔: %VLActivationInterval% 分鐘
+echo.    更新間隔: %VLRenewalInterval% 分鐘
+echo.    KMS 主機快取: %KeyManagementServiceHostCaching%
+if defined KeyManagementServiceLookupDomain echo.    KMS SRV 記錄查找域: %KeyManagementServiceLookupDomain%
 if defined ExpireMsg echo.&echo.    %ExpireMsg%
 exit /b
 
 :casWend
 if %_Identity% EQU 1 if %_prsh% EQU 1 (
 echo %line2%
-echo ***                  Office 網路許可激活狀態                ***
+echo ***                  Office 聯網許可啟動狀態                ***
 echo %line2%
 %_psc% "$f=[IO.File]::ReadAllText('!_batp!') -split ':vNextDiag\:.*';iex ($f[1])"
-title 檢測激活狀態 [wmi]
+title 檢測啟動狀態 [wmi]
 echo %line3%
 echo.
 )
 echo.
-echo 按任意鍵繼續...
+echo 敲任意鍵繼續...
 pause >nul
 goto :eof
 
@@ -3018,7 +3076,7 @@ function PrintModePerPridFromRegistry
 	$vNextPrids = Get-Item -Path $vNextRegkey -ErrorAction Ignore | Select-Object -ExpandProperty 'property' | Where-Object -FilterScript {$_ -Ne 'InstalledGraceKey' -And $_ -Ne 'MigrationToV5Done' -And $_ -Ne 'test' -And $_ -Ne 'unknown'}
 	If ($vNextPrids -Eq $null)
 	{
-		Write-Host "未找到註冊表項。"
+		Write-Host "未找到註冊表項."
 		Return
 	}
 	$vNextPrids | ForEach `
@@ -3102,7 +3160,7 @@ function PrintLicensesInformation
 	}
 	If ($licenseFiles.length -Eq 0)
 	{
-		Write-Host "未找到許可證。"
+		Write-Host "未找到許可證."
 		Return
 	}
 	$licenseFiles | ForEach `
@@ -3187,6 +3245,11 @@ PrintLicensesInformation -Mode "Device"
 :keys
 if "%~1"=="" exit /b
 goto :%1 %_Nul2%
+
+:: Windows 11 [Ni]
+:59eb965c-9150-42b7-a0ec-22151b9897c5
+set "_key=KBN8V-HFGQ4-MGXVD-347P6-PDQGT" &:: IoT Enterprise LTSC
+exit /b
 
 :: Windows 11 [Co]
 :ca7df2e3-5ea0-47b8-9ac1-b1be4d8edd69
@@ -3984,6 +4047,23 @@ Add-Type -Language CSharp -TypeDefinition @"
  n += 84 * p85[p+i]; } ms.Write(n4b(), 0, p-1); } File.WriteAllBytes(tmp, ms.ToArray()); ms.SetLength(0); }
  private static byte[] n4b(){ return new byte[4]{(byte)(n>>24),(byte)(n>>16),(byte)(n>>8),(byte)n}; } private static long n=0; }
 "@; function X([int]$r=1){ [BAT85]::Decode($d+"\\SppExtComObjHook.dll", $f[$r+1]) }; function Y([int]$r=1){ $tmp="$r._"; [BAT85]::Decode($tmp, $f[$r+1]); expand $d\$tmp -F:* -R; del $tmp -force }
+
+<#
+:: 1st Block (above):
+:: Powershell 解碼嵌入文件代碼
+:: https://github.com/AveYo/Compressed2TXT
+::
+:: 2nd Block:
+:: SppExtComObjHook-x86.dll   SHA-1: da8f931c7f3bc6643e20063e075cd8fa044b53ae
+:: 3rd Block:
+:: SppExtComObjHook-x64.dll   SHA-1: 684103f5c312ae956e66a02b965d9aad59710745
+:: 4th Block:
+:: SppExtComObjHook-arm64.dll SHA-1: 1139ae6243934ca621e6d4ed2e2f34cc130ef88a
+:: 5th Block:
+:: cleanospp-x86.cab      SHA-1 cab: 77a936d8986fd46e098afe583fd2ebfb6af25031 / EXE: 39ed8659e7ca16aaccb86def94ce6cec4c847dd6
+:: 6th Block:
+:: cleanospp-x64.cab      SHA-1 cab: 2ead12fea8eaf8f0d71bbcc06db84c7ba1879ca3 / EXE: d30a0e4e5911d3ca705617d17225372731c770e2
+#>
 
 :embdbin:
 ::O;Iru0{{R31ONa4|Nj60xBvhE00000KmY($0000000000000000000000000000000000000000$N(HU4j/M?0JI6sA.Dld&]^51X?&ZOa(KpHVQnB|VQy}3bRc47
@@ -4920,8 +5000,10 @@ Add-Type -Language CSharp -TypeDefinition @"
             <h2 id="Supported">Supported Products</h2>
     <p>Volume-capable:</p>
     <ul>
-      <li>Windows 10/11:<br />
-      Enterprise, Enterprise LTSC/LTSB, Enterprise G, Enterprise multi-session, Enterprise, Education, Pro, Pro Workstation, Pro Education, Home, Home Single Language, Home China</li><br />
+      <li>Windows 11:<br />
+      Enterprise, Enterprise LTSC, IoT Enterprise LTSC, Enterprise G, Enterprise multi-session, SE (CloudEdition), Education, Pro, Pro Workstation, Pro Education, Home, Home Single Language, Home China</li><br />
+      <li>Windows 10:<br />
+      Enterprise, Enterprise LTSC/LTSB, Enterprise G, Enterprise multi-session, Education, Pro, Pro Workstation, Pro Education, Home, Home Single Language, Home China</li><br />
       <li>Windows 8.1:<br />
       Enterprise, Pro, Pro with Media Center, Core, Core Single Language, Core China, Pro for Students, Bing, Bing Single Language, Bing China, Embedded Industry Enterprise/Pro/Automotive</li><br />
       <li>Windows 8:<br />
@@ -4970,7 +5052,7 @@ Add-Type -Language CSharp -TypeDefinition @"
     <ul>
       <li>Office Click-to-Run builds (since February 2021) that are activated with KMS checks the existence of the KMS server name in the registry.</li>
       <li>If KMS server is not present, a banner is shown in Office programs notifying that "Office isn't licensed properly", see <a href="https://i.imgur.com/gLFxssD.png" target="_blank">here</a>.</li>
-      <li>Therefore in manual mode, <code>KeyManagementServiceName</code> value containing a non-existent IP address <strong>0.0.0.0</strong> will be kept in the below registry keys:
+      <li>Therefore in manual mode, <code>KeyManagementServiceName</code> value containing an internal private-network IP address <strong>172.16.0.2</strong> will be kept in the below registry keys:
       <div><code>HKEY_LOCAL_MACHINE\SOFTWARE\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform</code><br />
       <code>HKEY_LOCAL_MACHINE\SOFTWARE\WOW6432Node\Microsoft\Windows NT\CurrentVersion\SoftwareProtectionPlatform</code></div></li>
       <li>This is perfectly fine to keep, and it does not affect Windows or Office activation.</li>
@@ -5484,16 +5566,16 @@ cmd.exe /c ""!_batf!" !_para!"
 set _dDbg=Yes
 echo.
 echo Done.
-echo 按任意鍵退出。...
+echo Press any key to continue...
 pause >nul
 goto :MainMenu
 
 :E_Admin
 echo %_err%
-echo 由於此激活腳本需要管理員權限。
-echo 因此，請右鍵選擇"以管理員權限執行"
+echo 由於此啟動腳本需要管理員權限.
+echo 因此，請右鍵選擇「以管理員身份運行」
 echo.
-echo 按任意鍵退出。
+echo 敲任意鍵退出.
 if %_Debug% EQU 1 goto :eof
 if %Unattend% EQU 1 goto :eof
 pause >nul
@@ -5501,9 +5583,20 @@ goto :eof
 
 :E_PS
 echo %_err%
-echo 此腳本需要依賴 Windows PowerShell 才能正常執行。
+echo 此腳本需要依賴Windows PowerShell才能正常運行.
 echo.
-echo 按任意鍵退出。
+echo 敲任意鍵退出.
+if %_Debug% EQU 1 goto :eof
+if %Unattend% EQU 1 goto :eof
+pause >nul
+goto :eof
+
+:E_LM
+echo %_err%
+echo Windows PowerShell 命令提示符工具沒有響應.
+echo 請檢查是否能正常運行,不要在語言受限被鎖定.
+echo.
+echo 敲任意鍵退出.
 if %_Debug% EQU 1 goto :eof
 if %Unattend% EQU 1 goto :eof
 pause >nul
@@ -5511,10 +5604,21 @@ goto :eof
 
 :E_VBS
 echo %_err%
-echo Windows腳本宿主被禁用
-echo 整個腳本需要依賴它執行
+echo Windows 腳本宿主被禁用.
+echo 整個腳本需要依賴它運行.
 echo.
-echo 按任意鍵退出。
+echo 敲任意鍵退出.
+if %_Debug% EQU 1 goto :eof
+if %Unattend% EQU 1 goto :eof
+pause >nul
+goto :eof
+
+:E_WMS
+echo %_err%
+echo Windows Management Instrumentation [WinMgmt] 服務已禁用.
+echo KMS_VL_ALL啟動腳本需啟用 [WinMgmt] 這項服務才能正常運行.
+echo.
+echo 敲任意鍵退出.
 if %_Debug% EQU 1 goto :eof
 if %Unattend% EQU 1 goto :eof
 pause >nul
@@ -5522,15 +5626,15 @@ goto :eof
 
 :UnsupportedVersion
 echo %_err%
-echo 檢測到不支援的系統版本
-echo 腳本僅支援 Windows 7/8/8.1/10/11 及 server 版本
+echo 檢測到不支持的系統版本.
+echo 腳本僅支持 Windows 7/8/8.1/10/11 及伺服器版本.
 :TheEnd
 if exist "%PUBLIC%\ReadMeAIO.html" del /f /q "%PUBLIC%\ReadMeAIO.html"
 if exist "%_temp%\'" del /f /q "%_temp%\'"
 if exist "%_temp%\`.txt" del /f /q "%_temp%\`.txt"
 if defined _quit goto :eof
 echo.
-if %Unattend% EQU 0 echo 按任意鍵退出。
+if %Unattend% EQU 0 echo 敲任意鍵退出.
 %_Pause%
 goto :eof
 
